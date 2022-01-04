@@ -3,7 +3,7 @@
 # Tau is not effected by subgroup noise.
 
 # Required Packages - Dependencies Automated Install
-install.packages(c("grf", "doParallel", "doSNOW", "doRNG", "FNN","mvtnorm"))
+#install.packages(c("grf", "doParallel", "doSNOW", "doRNG", "FNN","mvtnorm"))
 
 # Libraries Used
 library("mvtnorm")
@@ -40,8 +40,8 @@ experimentc1 <- function(n,
   colnames(X)[colnames(X) == 'U.test'] <- 'U'
   colnames(X)[colnames(X) == 'S.test'] <- 'S'
   
-  tau <- abs(2*X.test[,1]) + X.test[,2]
-  Y <- tau * W + 0.5*X[,3] + U.r + rnorm(n, 0, noise) 
+  tau <- 2*X.test[,1] + X.test[,2]
+  Y <- (2*X[,1] + X[,2])* W + X[,3]+ U.r + rnorm(n, 0, noise)
   
   return(list(X=X,
               X.test=X.test,
@@ -115,8 +115,8 @@ CF_estimator <- function(X,
               sigma = sqrt(estimates$variance.estimates),
               ate = ate,
               var.imp = variable_importance(CF),
-              mean.pred = test_cali[1,1],
-              differential.pred = test_cali[2,1]
+              mean.pred = test_cal[1,1],
+              differential.pred = test_cal[2,1]
               ))
 }
 
@@ -153,8 +153,9 @@ simulation_procedure <- function(d) {
 
 # Part 5: Running Scrip with parallelisation
 
-n.simulation <- 1000
+n.simulation <- 2
 parameter.values <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1, 2)
+parameter.values <- c(0.1, 0.2)
 columns = c("n",
             "d",
             "cf.mse",
