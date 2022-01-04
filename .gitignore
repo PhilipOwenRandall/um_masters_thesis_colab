@@ -2,3 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+/.idea/.gitignore
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/um_masters_thesis_colab.iml
+/.idea/vcs.xml
