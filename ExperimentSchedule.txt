@@ -1,5 +1,5 @@
 Cedric: Design 1 
-Philip: Experiment A1
+Lukas: Experiment A1
 Elena: Experiment A2 
 Filip: Experiment A3
-Lukas: Experiment B 
+Philip: Experiment B
