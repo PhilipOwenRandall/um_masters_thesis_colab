@@ -3,3 +3,4 @@ Lukas: Experiment A1
 Elena: Experiment A2 
 Filip: Experiment A3
 Philip: Experiment B
+Joris: Experiment C1
