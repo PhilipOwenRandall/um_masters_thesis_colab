@@ -1,5 +1,5 @@
-# Scrip For Christian - Experiment C1
-# C1 trains the model with the randomly distributed variables, the subgroup noise and the sample identifiers
+# Scrip For Christian - Experiment C2
+# C1 now hides from the model randomly distributed variables, the subgroup noise and the sample identifiers
 # Tau is not effected by subgroup noise.
 
 # Required Packages - Dependencies Automated Install
@@ -14,7 +14,7 @@ library(doRNG)
 library(FNN)
 
 # Part 1: Data Generating Processes
-experimentc1 <- function(n, 
+experimentc2 <- function(n, 
                          n.test, 
                          d, 
                          prop,
@@ -40,7 +40,7 @@ experimentc1 <- function(n,
   colnames(X.test)[colnames(X.test) == 'U.test'] <- 'U'
   colnames(X.test)[colnames(X.test) == 'S.test'] <- 'S'
   
-  tau <- 2*X.test[,1] + X.test[,2]
+  tau <- 2*X.test[,1] + X.test[,2] + U.test
   Y <- (2*X[,1] + X[,2])* W + X[,3]+ U.r + rnorm(n, 0, noise)
   
   return(list(X=X,
@@ -117,7 +117,7 @@ CF_estimator <- function(X,
               var.imp = variable_importance(CF),
               mean.pred = test_cal[1,1],
               differential.pred = test_cal[2,1]
-              ))
+  ))
 }
 
 # Part 4: Simulations
@@ -125,7 +125,7 @@ simulation_procedure <- function(d) {
   n <- 4000
   n.test <- 1000
   noise <- 0.5
-  data <- experimentc1(n,          # The name of this function needs to be changed.
+  data <- experimentc2(n,          # The name of this function needs to be changed.
                        n.test,
                        d=d,
                        prop = 0.5,
@@ -195,4 +195,4 @@ for(parameter in parameter.values){
   output <- rbind.data.frame(output, results)
 }
 output <- setNames(output, columns)
-save.image(paste("Experiment_C1_RWTH.RData",sep=""))
+save.image(paste("Experiment_C2_RWTH.RData",sep=""))
