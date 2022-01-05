@@ -1,6 +1,21 @@
+Google Colab:
+All the below experiments timed out and were not completed. The notebooks destributed are in
+individual branches for each person.
 Cedric: Design 1 
 Lukas: Experiment A1
 Elena: Experiment A2 
 Filip: Experiment A3
 Philip: Experiment B
 Joris: Experiment C1
+
+RWTH cluster was used to resimulate the data. These individual files can be found in the master branch.
+Experiment_A1
+Experiment_A2
+Experiment_A3
+Experiment_B
+Experiment_C1
+Experiment_C2
+Experiment_C3
+Experiment_C1_hidden
+Experiment_C2_hidden
+Experiment_C3_hidden
