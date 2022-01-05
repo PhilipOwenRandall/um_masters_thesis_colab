@@ -104,13 +104,14 @@ CF_estimator <- function(X,
   estimates <- predict(CF,
                        X.test,
                        estimate.variance = TRUE)
+  
   ate <- average_treatment_effect(CF, target.sample = "all")
   test_cal <- test_calibration(CF)
   
   return(list(predictions = estimates$predictions,
               sigma = sqrt(estimates$variance.estimates),
-              ate = ate,
-              var.imp = variable_importance(CF),
+              ate.est = ate[[1]],
+              ate.std = ate[[2]],
               mean.pred = test_cal[1,1],
               differential.pred = test_cal[2,1]))
 }
@@ -122,10 +123,10 @@ simulation_procedure <- function(d) {
   n.test <- 1000
   noise <- 0.5
   data <- experimentb(n,
-                       n.test,
-                       d=d,
-                       prop = 0.5,
-                       noise)
+                      n.test,
+                      d=d,
+                      prop = 0.5,
+                      noise)
   
   # causal forest  
   cf <- CF_estimator(data$X,
@@ -143,15 +144,17 @@ simulation_procedure <- function(d) {
                      cf.sigma = mean(cf$sigma),
                      cf.coverage = cf.evaluation$coverage,
                      cf.mean.pred = cf$mean.pred,
-                     cf.differential.pred = cf$differential.pred))
+                     cf.differential.pred = cf$differential.pred,
+                     cf.ate.est = cf$ate.est,
+                     cf.ate.std.err = cf$ate.std))
   
 }
 
 # Part 5: Running Script
 
-n.simulation <- 5
+n.simulation <- 1000
 parameter.values <- c(6,8,12,16,20)
-form <- "linear"
+
 columns = c("n",
             "d",
             "cf.mse",
@@ -159,7 +162,9 @@ columns = c("n",
             "cf.sigma",
             "cf.coverage",
             "mean.pred",
-            "differential.pred")
+            "differential.pred",
+            "ate.est",
+            "ate.std.err")
 
 cores=detectCores()
 cl <- makeCluster(cores[1])
@@ -174,7 +179,7 @@ progress <- function(n)
 opts <- list(progress=progress)
 
 # initialize dataframe
-output <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
+output_b <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
                    columns)
 
 # run simulation
@@ -189,7 +194,7 @@ for(parameter in parameter.values){
                     .packages=c('grf', 'FNN', 'mvtnorm')) %dopar% {
                       simulation_procedure(parameter)
                     }
-  output <- rbind.data.frame(output, results)
+  output_b <- rbind.data.frame(output_b, results)
 }
-output <- setNames(output, columns)
+output_b <- setNames(output_b, columns)
 save.image(paste("Experiment_B.RData",sep=""))

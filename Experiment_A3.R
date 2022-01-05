@@ -96,8 +96,8 @@ CF_estimator <- function(X,
   
   return(list(predictions = estimates$predictions,
               sigma = sqrt(estimates$variance.estimates),
-              ate = ate,
-              var.imp = variable_importance(CF),
+              ate.est = ate[[1]],
+              ate.std = ate[[2]],
               mean.pred = test_cal[1,1],
               differential.pred = test_cal[2,1]))
 }
@@ -130,7 +130,9 @@ simulation_procedure <- function(d) {
                      cf.sigma = mean(cf$sigma),
                      cf.coverage = cf.evaluation$coverage,
                      cf.mean.pred = cf$mean.pred,
-                     cf.differential.pred = cf$differential.pred))
+                     cf.differential.pred = cf$differential.pred,
+                     cf.ate.est = cf$ate.est,
+                     cf.ate.std.err = cf$ate.std))
   
 }
 
@@ -138,7 +140,7 @@ simulation_procedure <- function(d) {
 
 n.simulation <- 1000
 parameter.values <- c(6,8,12,16,20)
-form <- "linear"
+
 columns = c("n",
             "d",
             "cf.mse",
@@ -146,7 +148,9 @@ columns = c("n",
             "cf.sigma",
             "cf.coverage",
             "mean.pred",
-            "differential.pred")
+            "differential.pred",
+            "ate.est",
+            "ate.std.err")
 
 cores=detectCores()
 cl <- makeCluster(cores[1])
@@ -161,7 +165,7 @@ progress <- function(n)
 opts <- list(progress=progress)
 
 # initialize dataframe
-output <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
+output_a3 <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
                    columns)
 
 # run simulation
@@ -173,10 +177,10 @@ for(parameter in parameter.values){
   results = foreach(i=1:n.simulation,
                     .combine=rbind,
                     .options.snow=opts,
-                    .packages=c('grf', 'FNN')) %dopar% {
+                    .packages=c('grf', 'FNN','mvtnorm')) %dopar% {
                       simulation_procedure(parameter)
                     }
-  output <- rbind.data.frame(output, results)
+  output_a3 <- rbind.data.frame(output_a3, results)
 }
-output <- setNames(output, columns)
+output_a3 <- setNames(output_a3, columns)
 save.image(paste("Experiment_A3.RData",sep=""))
