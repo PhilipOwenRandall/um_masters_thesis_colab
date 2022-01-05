@@ -1,5 +1,5 @@
-# Scrip For Christian - Experiment A2_D1
-# Experiment A2_D1 has strong heterogeneity (Uniform dist of data)
+# Scrip For Christian - Experiment A2
+# Experiment A2 has strong heterogeneity (normal dist of data)
 
 
 library("mvtnorm")
@@ -11,21 +11,21 @@ library(FNN)
 
 # Part 1: Data Generating Processes
 
-# Experiment A2_D1: Strong Treatment Effect Heterogeneity (Uniform Dist)
-design1 <- function(n,
-                    n.test,
-                    d,
-                    prop,
-                    noise,
-                    form) 
+# Experiment A2: Strong Treatment Effect Heterogeneity (Norm Dist)
+experimenta2 <- function(n, 
+                         n.test, 
+                         d, 
+                         prop,
+                         noise)
 {
-  X <- matrix(runif(n * d, 0, 1), n, d)
-  X.test = matrix(runif(n.test * d, 0, 1), n.test, d)
+  mean <- 2
+  X <- matrix(rnorm(n * d, mean, 1), n, d)
+  X.test <- matrix(rnorm(n.test * d, mean, 1), n.test, d)
   W <- rbinom(n, 1, prop)
   
-  tau <- 2*X.test[,1] + X.test[,2]
-  Y <- (2*X[,1] + X[,2]) * W + X[,3] + rnorm(n, 0, noise)
-
+  tau <- (2*X.test[,1]) + X.test[,2]
+  Y <- ((2*X[,1]) + X[,2])* W + X[,3] + rnorm(n, 0, noise)
+  
   return(list(X=X,
               X.test=X.test,
               W=W,
@@ -87,6 +87,7 @@ CF_estimator <- function(X,
   estimates <- predict(CF,
                        X.test,
                        estimate.variance = TRUE)
+  
   ate <- average_treatment_effect(CF, target.sample = "all")
   test_cal <- test_calibration(CF)
   
@@ -104,11 +105,11 @@ simulation_procedure <- function(d) {
   n <- 4000
   n.test <- 1000
   noise <- 0.5
-  data <- design1(n,
-                  n.test,
-                  d=d,
-                  prop = 0.5,
-                  noise)
+  data <- experimenta2(n,
+                       n.test,
+                       d=d,
+                       prop = 0.5,
+                       noise)
   
   # causal forest  
   cf <- CF_estimator(data$X,
@@ -161,7 +162,7 @@ progress <- function(n)
 opts <- list(progress=progress)
 
 # initialize dataframe
-output_a2d <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
+output_a2 <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
                    columns)
 
 # run simulation
@@ -176,7 +177,7 @@ for(parameter in parameter.values){
                     .packages=c('grf', 'FNN','mvtnorm')) %dopar% {
                       simulation_procedure(parameter)
                     }
-  output_a2d <- rbind.data.frame(output_a2d, results)
+  output_a2 <- rbind.data.frame(output_a2, results)
 }
-output_a2d <- setNames(output_a2d, columns)
-save.image(paste("Experiment_A2_D1.RData",sep=""))
+output_a2 <- setNames(output_a2, columns)
+save.image(paste("Experiment_A2.RData",sep=""))

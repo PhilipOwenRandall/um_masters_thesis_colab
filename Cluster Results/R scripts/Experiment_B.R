@@ -1,5 +1,5 @@
-# Scrip For Christian - Experiment A2_D1
-# Experiment A2_D1 has strong heterogeneity (Uniform dist of data)
+# Scrip For Christian - Experiment B
+# Experiment B AR system
 
 
 library("mvtnorm")
@@ -10,27 +10,44 @@ library(doRNG)
 library(FNN)
 
 # Part 1: Data Generating Processes
-
-# Experiment A2_D1: Strong Treatment Effect Heterogeneity (Uniform Dist)
-design1 <- function(n,
-                    n.test,
-                    d,
-                    prop,
-                    noise,
-                    form) 
+# Helper function
+cor_ar <- function(n, rho) 
 {
-  X <- matrix(runif(n * d, 0, 1), n, d)
-  X.test = matrix(runif(n.test * d, 0, 1), n.test, d)
-  W <- rbinom(n, 1, prop)
+  exponent <- abs(matrix(1:n - 1, nrow = n, ncol = n, byrow = TRUE) - 
+                    (1:n - 1))^2
   
+  pre_round <- rho^exponent
+  # pre_round[abs(pre_round) < 0.5] <- 00.0000000001
+  pre_round
+}
+
+# Experiment A3: Strong Treatment Effect Heterogeneity (Norm Dist)
+experimentb <- function(n, 
+                        n.test, 
+                        d, 
+                        prop,
+                        noise)
+{
+  noise <- 0.1
+  mu_0 <- rep(1,d)
+  mu_0.test <- rep(1,d)
+  corcov <- cor_ar(d, 0.9)
+  corcov.t <- t(corcov)
+  semi_def <- corcov %*% corcov.t
+  X <- rmvnorm(n, mean = mu_0, sigma = semi_def)
+  X.test <- rmvnorm(n.test, mean = mu_0.test, sigma = semi_def)
+  
+  W <- rbinom(n, 1, prop)
   tau <- 2*X.test[,1] + X.test[,2]
   Y <- (2*X[,1] + X[,2]) * W + X[,3] + rnorm(n, 0, noise)
 
+
+  
   return(list(X=X,
               X.test=X.test,
               W=W,
               Y=Y,
-              tau=tau))
+              tau = tau))
 }
 
 # Part 2: Performance Evaluation
@@ -87,6 +104,7 @@ CF_estimator <- function(X,
   estimates <- predict(CF,
                        X.test,
                        estimate.variance = TRUE)
+  
   ate <- average_treatment_effect(CF, target.sample = "all")
   test_cal <- test_calibration(CF)
   
@@ -104,11 +122,11 @@ simulation_procedure <- function(d) {
   n <- 4000
   n.test <- 1000
   noise <- 0.5
-  data <- design1(n,
-                  n.test,
-                  d=d,
-                  prop = 0.5,
-                  noise)
+  data <- experimentb(n,
+                      n.test,
+                      d=d,
+                      prop = 0.5,
+                      noise)
   
   # causal forest  
   cf <- CF_estimator(data$X,
@@ -161,7 +179,7 @@ progress <- function(n)
 opts <- list(progress=progress)
 
 # initialize dataframe
-output_a2d <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
+output_b <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
                    columns)
 
 # run simulation
@@ -173,10 +191,10 @@ for(parameter in parameter.values){
   results = foreach(i=1:n.simulation,
                     .combine=rbind,
                     .options.snow=opts,
-                    .packages=c('grf', 'FNN','mvtnorm')) %dopar% {
+                    .packages=c('grf', 'FNN', 'mvtnorm')) %dopar% {
                       simulation_procedure(parameter)
                     }
-  output_a2d <- rbind.data.frame(output_a2d, results)
+  output_b <- rbind.data.frame(output_b, results)
 }
-output_a2d <- setNames(output_a2d, columns)
-save.image(paste("Experiment_A2_D1.RData",sep=""))
+output_b <- setNames(output_b, columns)
+save.image(paste("Experiment_B.RData",sep=""))

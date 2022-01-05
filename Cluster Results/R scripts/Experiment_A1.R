@@ -1,5 +1,5 @@
-# Scrip For Christian - Experiment A2_D1
-# Experiment A2_D1 has strong heterogeneity (Uniform dist of data)
+# Scrip For Christian - Experiment A1
+# Experiment A1 has constant treatment effects
 
 
 library("mvtnorm")
@@ -11,21 +11,21 @@ library(FNN)
 
 # Part 1: Data Generating Processes
 
-# Experiment A2_D1: Strong Treatment Effect Heterogeneity (Uniform Dist)
-design1 <- function(n,
-                    n.test,
-                    d,
-                    prop,
-                    noise,
-                    form) 
+# Experiment A1: Strong Treatment Effect Heterogeneity (Norm Dist)
+experimenta1 <- function(n, 
+                         n.test, 
+                         d, 
+                         prop,
+                         noise)
 {
-  X <- matrix(runif(n * d, 0, 1), n, d)
-  X.test = matrix(runif(n.test * d, 0, 1), n.test, d)
+  mean <- 2
+  X <- matrix(rnorm(n * d, mean, 1), n, d)
+  X.test = matrix(rnorm(n.test * d, mean, 1), n.test, d)
   W <- rbinom(n, 1, prop)
   
-  tau <- 2*X.test[,1] + X.test[,2]
-  Y <- (2*X[,1] + X[,2]) * W + X[,3] + rnorm(n, 0, noise)
-
+  tau <- 4
+  Y <- X[,1] + X[,2] + (4* W)  + rnorm(n, 0, noise)
+  
   return(list(X=X,
               X.test=X.test,
               W=W,
@@ -104,11 +104,11 @@ simulation_procedure <- function(d) {
   n <- 4000
   n.test <- 1000
   noise <- 0.5
-  data <- design1(n,
-                  n.test,
-                  d=d,
-                  prop = 0.5,
-                  noise)
+  data <- experimenta1(n,
+                       n.test,
+                       d=d,
+                       prop = 0.5,
+                       noise)
   
   # causal forest  
   cf <- CF_estimator(data$X,
@@ -161,7 +161,7 @@ progress <- function(n)
 opts <- list(progress=progress)
 
 # initialize dataframe
-output_a2d <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
+output_a1 <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
                    columns)
 
 # run simulation
@@ -176,7 +176,7 @@ for(parameter in parameter.values){
                     .packages=c('grf', 'FNN','mvtnorm')) %dopar% {
                       simulation_procedure(parameter)
                     }
-  output_a2d <- rbind.data.frame(output_a2d, results)
+  output_a1 <- rbind.data.frame(output_a1, results)
 }
-output_a2d <- setNames(output_a2d, columns)
-save.image(paste("Experiment_A2_D1.RData",sep=""))
+output_a1 <- setNames(output_a1, columns)
+save.image(paste("Experiment_A1.RData",sep=""))

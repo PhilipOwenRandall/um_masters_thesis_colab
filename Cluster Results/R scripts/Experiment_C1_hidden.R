@@ -1,7 +1,11 @@
-# Scrip For Christian - Experiment A2_D1
-# Experiment A2_D1 has strong heterogeneity (Uniform dist of data)
+# Scrip For Christian - Experiment C1_hidden
+# C1_hidden trains the model with the randomly distributed variables, the subgroup noise and the sample identifiers
+# Tau is not effected by subgroup noise.
 
+# Required Packages - Dependencies Automated Install
+#install.packages(c("grf", "doParallel", "doSNOW", "doRNG", "FNN","mvtnorm"))
 
+# Libraries Used
 library("mvtnorm")
 library(grf)
 library(doParallel)
@@ -10,22 +14,36 @@ library(doRNG)
 library(FNN)
 
 # Part 1: Data Generating Processes
-
-# Experiment A2_D1: Strong Treatment Effect Heterogeneity (Uniform Dist)
-design1 <- function(n,
-                    n.test,
-                    d,
-                    prop,
-                    noise,
-                    form) 
+experimentc1_hidden <- function(n, 
+                         n.test, 
+                         d, 
+                         prop,
+                         noise)
 {
-  X <- matrix(runif(n * d, 0, 1), n, d)
-  X.test = matrix(runif(n.test * d, 0, 1), n.test, d)
+  mean <- rep(1,6)
+  # use d=10 as a fixed value so that the dimensions can be used for sigma
+  X <- matrix(rnorm(n * 6, mean, 1), n, 6)
+  X.test = matrix(rnorm(n.test * 6, mean, 1), n.test, 6)
   W <- rbinom(n, 1, prop)
   
+  # 500 for 500 subgroups, d as the sigma for the normal distribution of the function u(s)
+  U <- rnorm(500, 0, d)
+  U.r <- rep(U,n/500)
+  S <- rep(seq(1,500,1), n/500)
+  X <- cbind(X,S,U.r)
+  colnames(X)[colnames(X) == 'U.r'] <- 'U'
+  X <- X[, colnames(X) != c("S","U")]
+  
+  S.test <- rep(seq(1,500,1), n.test/500)
+  U.test <- rep(U,n.test/500)
+  X.test <- cbind(X.test,S.test,U.test)
+  colnames(X.test)[colnames(X.test) == 'U.test'] <- 'U'
+  colnames(X.test)[colnames(X.test) == 'S.test'] <- 'S'
+  X.test <- X.test[, colnames(X.test) != c("S","U")]
+  
   tau <- 2*X.test[,1] + X.test[,2]
-  Y <- (2*X[,1] + X[,2]) * W + X[,3] + rnorm(n, 0, noise)
-
+  Y <- (2*X[,1] + X[,2])* W + X[,3]+ U.r + rnorm(n, 0, noise)
+  
   return(list(X=X,
               X.test=X.test,
               W=W,
@@ -38,6 +56,8 @@ design1 <- function(n,
 mse <- function(predictions, true) {
   return(mean((predictions-true)^2))
 }
+
+
 
 bias <- function(predictions, true){
   return(abs(mean(predictions-true)))
@@ -87,28 +107,30 @@ CF_estimator <- function(X,
   estimates <- predict(CF,
                        X.test,
                        estimate.variance = TRUE)
+  
   ate <- average_treatment_effect(CF, target.sample = "all")
-  test_cal <- test_calibration(CF)
+  
+  test_cal <- test_calibration(CF) 
   
   return(list(predictions = estimates$predictions,
               sigma = sqrt(estimates$variance.estimates),
-              ate.est = ate[[1]],
-              ate.std = ate[[2]],
+              ate = ate,
+              var.imp = variable_importance(CF),
               mean.pred = test_cal[1,1],
-              differential.pred = test_cal[2,1]))
+              differential.pred = test_cal[2,1]
+  ))
 }
 
-# Part 4: Simulation
-
+# Part 4: Simulations
 simulation_procedure <- function(d) {
   n <- 4000
   n.test <- 1000
   noise <- 0.5
-  data <- design1(n,
-                  n.test,
-                  d=d,
-                  prop = 0.5,
-                  noise)
+  data <- experimentc1_hidden(n,          # The name of this function needs to be changed.
+                              n.test,
+                              d=d,
+                              prop = 0.5,
+                              noise)
   
   # causal forest  
   cf <- CF_estimator(data$X,
@@ -126,17 +148,14 @@ simulation_procedure <- function(d) {
                      cf.sigma = mean(cf$sigma),
                      cf.coverage = cf.evaluation$coverage,
                      cf.mean.pred = cf$mean.pred,
-                     cf.differential.pred = cf$differential.pred,
-                     cf.ate.est = cf$ate.est,
-                     cf.ate.std.err = cf$ate.std))
+                     cf.differential.pred = cf$differential.pred))
   
 }
 
-# Part 5: Running Script
+# Part 5: Running Scrip with parallelisation
 
 n.simulation <- 1000
-parameter.values <- c(6,8,12,16,20)
-
+parameter.values <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1, 2)
 columns = c("n",
             "d",
             "cf.mse",
@@ -144,9 +163,8 @@ columns = c("n",
             "cf.sigma",
             "cf.coverage",
             "mean.pred",
-            "differential.pred",
-            "ate.est",
-            "ate.std.err")
+            "differential.pred")
+
 
 cores=detectCores()
 cl <- makeCluster(cores[1])
@@ -161,11 +179,10 @@ progress <- function(n)
 opts <- list(progress=progress)
 
 # initialize dataframe
-output_a2d <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
+output <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
                    columns)
 
 # run simulation
-# using the doRNG package to guarantee reproducible results
 set.seed(1)
 
 for(parameter in parameter.values){
@@ -176,7 +193,7 @@ for(parameter in parameter.values){
                     .packages=c('grf', 'FNN','mvtnorm')) %dopar% {
                       simulation_procedure(parameter)
                     }
-  output_a2d <- rbind.data.frame(output_a2d, results)
+  output <- rbind.data.frame(output, results)
 }
-output_a2d <- setNames(output_a2d, columns)
-save.image(paste("Experiment_A2_D1.RData",sep=""))
+output <- setNames(output, columns)
+save.image(paste("Experiment_C1_hidden_RWTH.RData",sep=""))
