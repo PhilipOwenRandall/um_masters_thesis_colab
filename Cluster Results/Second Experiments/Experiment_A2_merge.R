@@ -1,4 +1,6 @@
 # Scrip For Christian - Experiment A2
+# Second cluster run:
+# Changing n = 4000, 6000, 8000 and n.test = 4000 
 # Experiment A2 has strong heterogeneity (normal dist of data)
 
 
@@ -47,10 +49,20 @@ covered <- function(predictions, true, sigma) {
   return(mean(abs(predictions-true) / sigma <= 1.96))
 }
 
+covered2 <- function(predictions, true, sigma) {
+  return(mean(abs(predictions-true) / sigma <= 2.05))
+}
+
 evaluate <- function(predictions, true, sigma) {
   return(list(mse = mse(predictions,true),
               bias = bias(predictions,true),
               coverage = covered(predictions,true,sigma)))
+}
+
+evaluate2 <- function(predictions, true, sigma) {
+  return(list(mse = mse(predictions,true),
+              bias = bias(predictions,true),
+              coverage = covered2(predictions,true,sigma)))
 }
 
 # Part 3: Estimators
@@ -65,7 +77,7 @@ CF_estimator <- function(X,
                          W,
                          Y.hat = NULL,
                          W.hat = NULL,
-                         num.trees = 1000,
+                         num.trees,
                          clusters = NULL,
                          honesty = TRUE,
                          honesty.fraction = 0.5,
@@ -101,9 +113,7 @@ CF_estimator <- function(X,
 
 # Part 4: Simulation
 
-simulation_procedure <- function(d) {
-  n <- 4000
-  n.test <- 1000
+simulation_procedure <- function(d, n, n.test, n.tree) {
   noise <- 0.5
   data <- experimenta2(n,
                        n.test,
@@ -116,16 +126,20 @@ simulation_procedure <- function(d) {
                      data$X.test,
                      data$Y,
                      data$W,
-                     num.trees = 1000)
+                     num.trees = n.tree)
   
   cf.evaluation <- evaluate(cf$predictions, data$tau, cf$sigma)
+  cf.evaluation2 <- evaluate2(cf$predictions, data$tau, cf$sigma)
   
   return (data.frame(n = n,
+                     n.test = n.test,
+                     n.tree = n.tree,
                      d = d,
                      cf.mse = cf.evaluation$mse, 
                      cf.bias = cf.evaluation$bias,
                      cf.sigma = mean(cf$sigma),
-                     cf.coverage = cf.evaluation$coverage,
+                     cf.coverageSN = cf.evaluation$coverage,
+                     cf.coverageT = cf.evaluation2$coverage,
                      cf.mean.pred = cf$mean.pred,
                      cf.differential.pred = cf$differential.pred,
                      cf.ate.est = cf$ate.est,
@@ -136,14 +150,20 @@ simulation_procedure <- function(d) {
 # Part 5: Running Script
 
 n.simulation <- 1000
-parameter.values <- c(6,8,12,16,20)
+parameter.values <- c(3,6,8,12,16,20)
+n.parameters <- c(1000, 2000, 4000, 8000, 16000)
+n.test.parameters <- c(2000, 4000, 8000, 16000)
+n.tree.paramters <- c(1000, 4000, 8000)
 
 columns = c("n",
+            "n.test",
+            "n.tree",
             "d",
             "cf.mse",
             "cf.bias",
             "cf.sigma",
-            "cf.coverage",
+            "cf.coverageSN",
+            "cf.coverageT",
             "mean.pred",
             "differential.pred",
             "ate.est",
@@ -162,22 +182,37 @@ progress <- function(n)
 opts <- list(progress=progress)
 
 # initialize dataframe
-output_a2 <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
+output_merge <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
                    columns)
 
 # run simulation
 # using the doRNG package to guarantee reproducible results
 set.seed(1)
 
-for(parameter in parameter.values){
-  print(paste("Running ",parameter, ":"))
-  results = foreach(i=1:n.simulation,
-                    .combine=rbind,
-                    .options.snow=opts,
-                    .packages=c('grf', 'FNN','mvtnorm')) %dopar% {
-                      simulation_procedure(parameter)
-                    }
-  output_a2 <- rbind.data.frame(output_a2, results)
+for(n in n.parameters)
+{
+  print(paste0("starting on n = ", n))
+  for(n.test in n.test.parameters)
+  {
+    print(paste0("starting on n.test = ", n.test))
+    for(n.trees in n.tree.paramters)
+    {
+      print(paste0("starting on n.tress = ", n.trees))
+      for(parameter in parameter.values)
+      {
+        print(paste("Running ",parameter, ":"))
+        results = foreach(i=1:n.simulation,
+                          .combine=rbind,
+                          .options.snow=opts,
+                          .packages=c('grf', 'FNN','mvtnorm')) %dopar% 
+                          {
+                            simulation_procedure(parameter, n, n.test, n.trees)
+                          }
+        output_merge <- rbind.data.frame(output_merge, results)
+      }
+    }
+  }
 }
-output_a2 <- setNames(output_a2, columns)
-save.image(paste("Experiment_A2.RData",sep=""))
+
+output_merge <- setNames(output_merge, columns)
+save.image(paste("Experiment_A2_merge.RData",sep=""))
