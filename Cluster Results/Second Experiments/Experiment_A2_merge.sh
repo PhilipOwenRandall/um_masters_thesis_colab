@@ -5,7 +5,7 @@
 #SBATCH --output=output-%j.txt
 
 ### resource requirements
-#SBATCH --time=24:00:00
+#SBATCH --time=36:00:00
 ### max recommended memory per node: 187200M
 #SBATCH --mem-per-cpu=3900M
 #SBATCH --nodes=1
