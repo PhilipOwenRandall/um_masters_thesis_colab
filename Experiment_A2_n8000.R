@@ -149,11 +149,11 @@ simulation_procedure <- function(d, n, n.test, n.tree) {
 
 # Part 5: Running Script
 
-n.simulation <- 1000
-parameter.values <- c(3,6,8,12,16,20)
-n <- 8000
-n.test.parameters <- c(2000, 4000, 8000, 16000)
-n.tree.paramters <- c(1000, 2000, 4000)
+n.simulation <- 100
+parameter.values <- c(6,12,20)
+n <- 10000
+n.test.parameters <- c(8000)
+n.tree.paramters <- c(4000)
 
 total.iternations <- length(n.test.parameters) * length(parameter.values) * length(n.tree.paramters)
 interation.count <- 0
@@ -173,8 +173,15 @@ columns = c("n",
             "ate.std.err")
 
 cores=detectCores()
-cl <- makeCluster(cores[1])
+cl <- makeCluster(cores[1]-3)
 registerDoSNOW(cl)
+
+pb <- txtProgressBar(max=n.simulation, style=3)
+progress <- function(n) 
+{
+  setTxtProgressBar(pb, n)
+}
+opts <- list(progress=progress)
 
 # initialize dataframe
 output_merge <- setNames(data.frame(matrix(ncol = length(columns), nrow = 0)),
@@ -187,25 +194,22 @@ set.seed(1)
 
 # For these we set n.train = 1000
 # Iterate over n.test.parameters, parameter.values, n.tree.paramters
-for(n.test in n.test.parameters)
+
+for(parameter in parameter.values)
 {
-  for(n.trees in n.tree.paramters)
-  {
-    for(parameter in parameter.values)
+  results = foreach(i=1:n.simulation,
+                    .combine=rbind,
+                    .options.snow=opts,
+                    .packages=c('grf', 'FNN','mvtnorm')) %dopar% 
     {
-      results = foreach(i=1:n.simulation,
-                        .combine=rbind,
-                        .packages=c('grf', 'FNN','mvtnorm')) %dopar% 
-        {
-          simulation_procedure(parameter, n, n.test, n.trees)
-        }
-      interation.count <- interation.count + 1
-      print(paste0("Total Iterations Complete: ",interation.count,"/",total.iternations))
-      output_merge <- rbind.data.frame(output_merge, results)
+      simulation_procedure(parameter, 10000, 1000, 4000)
     }
-  }
+  interation.count <- interation.count + 1
+  print(paste0("Total Iterations Complete: ",interation.count,"/",total.iternations))
+  output_merge <- rbind.data.frame(output_merge, results)
 }
 
 
+
 output_merge <- setNames(output_merge, columns)
-save.image(paste0("Experiment_A2_merge_n8000.RData",sep=""))
+save.image(paste0("Experiment_A2_merge_n10000.RData",sep=""))
